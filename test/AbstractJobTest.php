@@ -14,76 +14,76 @@ use Resque\Test\FailingJob;
  */
 class AbstractJobTest extends Test
 {
-    /**
-     * @var Worker
-     */
-    protected $worker;
+	/**
+	 * @var Worker
+	 */
+	protected $worker;
 
-    public function setUp()
-    {
-        parent::setUp();
+	public function setUp()
+	{
+		parent::setUp();
 
-        // Register a worker to test with
-        $this->worker = new Worker($this->resque, 'jobs');
-        $this->worker->setLogger($this->logger);
-        $this->worker->register();
-    }
+		// Register a worker to test with
+		$this->worker = new Worker($this->resque, 'jobs');
+		$this->worker->setLogger($this->logger);
+		$this->worker->register();
+	}
 
-    public function testJobCanBeQueued()
-    {
-        $this->assertTrue((bool)$this->resque->enqueue('jobs', 'Resque\Test\Job'));
-    }
+	public function testJobCanBeQueued()
+	{
+		$this->assertTrue((bool)$this->resque->enqueue('jobs', 'Resque\Test\Job'));
+	}
 
-    public function testQueuedJobCanBeReserved()
-    {
-        $this->resque->enqueue('jobs', 'Resque\Test\Job');
+	public function testQueuedJobCanBeReserved()
+	{
+		$this->resque->enqueue('jobs', 'Resque\Test\Job');
 
-        $worker = $this->getWorker('jobs');
+		$worker = $this->getWorker('jobs');
 
-        $job = $worker->reserve('jobs');
+		$job = $worker->reserve('jobs');
 
-        if ($job == false) {
-            $this->fail('Job could not be reserved.');
-        }
+		if ($job == false) {
+			$this->fail('Job could not be reserved.');
+		}
 
-        $this->assertEquals('jobs', $job->getQueue());
-        $this->assertEquals('Resque\Test\Job', $job['class']);
-    }
+		$this->assertEquals('jobs', $job->getQueue());
+		$this->assertEquals('Resque\Test\Job', $job['class']);
+	}
 
-    /**
-     * @expectedException \InvalidArgumentException
-     */
-    public function testObjectArgumentsCannotBePassedToJob()
-    {
-        $args = new \stdClass;
-        $args->test = 'somevalue';
-        $this->resque->enqueue('jobs', 'Resque\Test\Job', $args);
-    }
+	/**
+	 * @expectedException \InvalidArgumentException
+	 */
+	public function testObjectArgumentsCannotBePassedToJob()
+	{
+		$args = new \stdClass;
+		$args->test = 'somevalue';
+		$this->resque->enqueue('jobs', 'Resque\Test\Job', $args);
+	}
 
-    public function testFailedJobExceptionsAreCaught()
-    {
-        $this->resque->clearQueue('jobs');
+	public function testFailedJobExceptionsAreCaught()
+	{
+		$this->resque->clearQueue('jobs');
 
-        $job = new FailingJob('jobs', array(
-            'class' => 'Resque\Test\FailingJob',
-            'args'  => null,
-            'id'    => 'failing_test_job'
-        ));
-        $job->setResque($this->resque);
+		$job = new FailingJob('jobs', array(
+			'class' => 'Resque\Test\FailingJob',
+			'args'  => null,
+			'id'    => 'failing_test_job'
+		));
+		$job->setResque($this->resque);
 
-        $this->worker->perform($job);
+		$this->worker->perform($job);
 
-        $failed = new Statistic($this->resque, 'failed');
-        $workerFailed = new Statistic($this->resque, 'failed:' . (string)$this->worker);
+		$failed = new Statistic($this->resque, 'failed');
+		$workerFailed = new Statistic($this->resque, 'failed:' . (string)$this->worker);
 
-        $this->assertEquals(1, $failed->get());
-        $this->assertEquals(1, $workerFailed->get());
-    }
+		$this->assertEquals(1, $failed->get());
+		$this->assertEquals(1, $workerFailed->get());
+	}
 
-    public function testInvalidJobReservesNull()
-    {
-        $this->resque->enqueue('jobs', 'Resque\Test\NoPerformJob');
-        $job = $this->worker->reserve();
-        $this->assertNull($job);
-    }
+	public function testInvalidJobReservesNull()
+	{
+		$this->resque->enqueue('jobs', 'Resque\Test\NoPerformJob');
+		$job = $this->worker->reserve();
+		$this->assertNull($job);
+	}
 }

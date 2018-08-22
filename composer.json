@@ -57,7 +57,7 @@
     },
 
     "scripts": {
-        "test": "php vendor/bin/phpunit test"
+        "test": "php vendor/bin/phpunit --bootstrap=\"test/bootstrap.php\" --colors test"
     }
 
 }

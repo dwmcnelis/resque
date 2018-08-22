@@ -11,9 +11,9 @@
 (@include_once __DIR__ . '/vendor/autoload.php') || @include_once __DIR__ . '/../../autoload.php';
 
 $predis = new \Predis\Client(array(
-    'scheme' => 'tcp',
-    'host'   => '127.0.0.1',
-    'port'   => 6379
+	'scheme' => 'tcp',
+	'host'   => '127.0.0.1',
+	'port'   => 6379
 ));
 
 $logger = new \Resque\Logger();
