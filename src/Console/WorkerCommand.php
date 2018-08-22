@@ -42,6 +42,20 @@ class WorkerCommand extends Command
     protected function execute(InputInterface $input, OutputInterface $output)
     {
         $resque = $this->getResque($output);
+        $logger = $resque->getLogger();
+
+        if ($output->getVerbosity() === OutputInterface::VERBOSITY_QUIET) {
+        	$logger->quiet();
+        } elseif ($output->getVerbosity() === OutputInterface::VERBOSITY_NORMAL) {
+        	$logger->normal();
+        } elseif ($output->getVerbosity() === OutputInterface::VERBOSITY_VERBOSE) {
+        	$logger->verbose();
+        } elseif ($output->getVerbosity() === OutputInterface::VERBOSITY_VERY_VERBOSE) {
+        	$logger->very_verbose();
+        } elseif ($output->getVerbosity() === OutputInterface::VERBOSITY_DEBUG) {
+        	$logger->extremely_verbose();
+        }
+
         $queues = $input->getOption('queue');
 
         $worker = new Worker($resque, $queues);

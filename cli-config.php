@@ -17,5 +17,6 @@ $predis = new \Predis\Client(array(
 ));
 
 $logger = new \Resque\Logger();
+$logger->ansi(true);
 
 return \Resque\Console\ConsoleRunner::createHelperSet($predis, $logger);
