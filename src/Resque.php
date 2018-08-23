@@ -175,7 +175,7 @@ class Resque implements LoggerAwareInterface
 	 */
 	public function log($message, $priority = LogLevel::INFO)
 	{
-		$this->logger->log($message, $priority);
+		$this->logger->log($priority, $message);
 	}
 
 	/**
