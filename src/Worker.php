@@ -322,7 +322,9 @@ class Worker implements LoggerAwareInterface
 				$exitStatus = pcntl_wexitstatus($status);
 
 				if ($exitStatus !== 0) {
-					$this->logger->notice('Job exited with exit code {code}',array('code' => $exitStatus));
+					$this->logger->notice('Job exited with exit code {code}', array(
+						'code' => $exitStatus
+					));
 					$this->failJob($job, new DirtyExitException(
 						'Job exited with exit code ' . $exitStatus
 					));
@@ -412,6 +414,7 @@ class Worker implements LoggerAwareInterface
 		}
 
 		$id = isset($job['id']) ? $job['id'] : null;
+		$class = isset($job['class']) ? $job['class'] : null;
 
 		if ($id) {
 			try {
@@ -487,10 +490,11 @@ class Worker implements LoggerAwareInterface
 
 			try {
 				$job = $this->createJobInstance($queue, $payload);
-			} catch (ResqueException $exception) {
-				$reflect = new \ReflectionClass($exception);
-				$failure = strtolower(preg_replace('/(?<!^)[A-Z]/', ' $0', preg_replace('/Exception$/', '', preg_replace('/^Job/', '', $reflect->getShortName()))));
-				$this->logger->notice('Job class {class} failed because {failure}', array('class' => $payload['class'], 'failure' => $failure));
+			} catch (Exception $exception) {
+				$this->logger->notice('Job class {class} failed because {error}', array(
+					'class' => $payload['class'],
+					'error' => $exception->getMessage()
+				));
 				$this->failJob($payload, $exception);
 				return null;
 			}
@@ -730,7 +734,9 @@ class Worker implements LoggerAwareInterface
 		$this->logger->debug('Unregistering worker ' . $this->getId());
 
 		if ($this->currentJob) {
-			$this->logger->notice('Lost job on shutdown: {class}',array('class' => $this->currentJob->getPayload()['class']));
+			$this->logger->notice('Lost job on shutdown: {class}', array(
+				'class' => $this->currentJob->getPayload()['class']
+			));
 			$this->failJob($this->currentJob, new DirtyExitException());
 		}
 
