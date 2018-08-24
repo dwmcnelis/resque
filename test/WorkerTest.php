@@ -189,7 +189,9 @@ class WorkerTest extends Test
 			'id'    => 'test'
 		);
 
-		$job = new Job('jobs', $payload);
+		$job = new Job();
+		$job->setQueue('jobs');
+		$job->setPayload($payload);
 		$worker->workingOn($job);
 
 		$job = $worker->job();
@@ -290,7 +292,9 @@ class WorkerTest extends Test
 
 		$worker = $this->getWorker('jobs');
 
-		$job = new Job('jobs', array(
+		$job = new Job();
+		$job->setQueue('jobs');
+		$job->setPayload(array(
 			'class' => 'Resque\Test\Job',
 			'id'    => __METHOD__
 		));

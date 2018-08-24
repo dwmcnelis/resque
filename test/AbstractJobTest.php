@@ -64,7 +64,9 @@ class AbstractJobTest extends Test
 	{
 		$this->resque->clearQueue('jobs');
 
-		$job = new FailingJob('jobs', array(
+		$job = new FailingJob();
+		$job->setQueue('jobs');
+		$job->setPayload(array(
 			'class' => 'Resque\Test\FailingJob',
 			'args'  => null,
 			'id'    => 'failing_test_job'

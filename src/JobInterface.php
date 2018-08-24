@@ -13,13 +13,27 @@ use \Exception;
 interface JobInterface
 {
 	/**
-	 * Constructor
-	 *
 	 * @param string $queue
+	 * @return void
+	 */
+	public function setQueue($queue);
+
+	/**
 	 * @param array $payload
 	 * @return void
 	 */
-	public function __construct($queue, array $payload);
+	public function setPayload(array $payload);
+
+	/**
+	 * @return string
+	 */
+
+	public function getQueue();
+
+	/**
+	 * @return array
+	 */
+	public function getPayload();
 
 	/**
 	 * Actually performs the work of the job
@@ -28,13 +42,4 @@ interface JobInterface
 	 */
 	public function perform();
 
-	/**
-	 * @return string
-	 */
-	public function getQueue();
-
-	/**
-	 * @return array
-	 */
-	public function getPayload();
 }

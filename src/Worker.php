@@ -181,7 +181,9 @@ class Worker implements LoggerAwareInterface
 			throw new JobInvalidException();
 		}
 
-		$job = new $payload['class']($queue, $payload);
+		$job = new $payload['class']();
+		$job->setQueue($queue);
+		$job->setPayload($payload);
 
 		if (method_exists($job, 'setResque')) {
 			$job->setResque($this->resque);

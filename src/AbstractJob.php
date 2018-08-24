@@ -42,22 +42,28 @@ abstract class AbstractJob implements ArrayAccess, IteratorAggregate, JobInterfa
 	/**
 	 * Instantiate a new instance of a job.
 	 *
-	 * @param string $queue The queue that the job belongs to.
-	 * @param array $payload array containing details of the job.
 	 */
-	public function __construct($queue, array $payload)
+	public function __construct()
 	{
-		$this->queue = $queue;
-		$this->payload = $payload;
-		$this->id = isset($payload['id']) ? $payload['id'] : null;
 	}
 
 	/**
-	 * @param Resque $resque
+	 * @param string $queue The queue that the job belongs to.
+	 * @return void
 	 */
-	public function setResque(Resque $resque)
+	public function setQueue($queue)
 	{
-		$this->resque = $resque;
+		$this->queue = $queue;
+	}
+
+	/**
+	 * @param array $payload array containing details of the job.
+	 * @return void
+	 */
+	public function setPayload(array $payload)
+	{
+		$this->payload = $payload;
+		$this->id = isset($payload['id']) ? $payload['id'] : null;
 	}
 
 	/**
@@ -66,6 +72,22 @@ abstract class AbstractJob implements ArrayAccess, IteratorAggregate, JobInterfa
 	public function getQueue()
 	{
 		return $this->queue;
+	}
+
+	/**
+	 * @return array
+	 */
+	public function getPayload()
+	{
+		return $this->payload;
+	}
+
+	/**
+	 * @param Resque $resque
+	 */
+	public function setResque(Resque $resque)
+	{
+		$this->resque = $resque;
 	}
 
 	/**
@@ -87,11 +109,6 @@ abstract class AbstractJob implements ArrayAccess, IteratorAggregate, JobInterfa
 	public function getId()
 	{
 		return $this->id;
-	}
-
-	public function getPayload()
-	{
-		return $this->payload;
 	}
 
 	/**
