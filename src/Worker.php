@@ -310,7 +310,18 @@ class Worker implements LoggerAwareInterface
 				$this->logger->notice($status);
 				$this->perform($job);
 
-				exit(0);
+				// Exit with status 0, without invoking registered shutdown handlers
+				// since child inherited parent's handlers (and socket connections)
+				if (is_executable('/bin/true')) {
+					pcntl_exec('/bin/true');
+				} elseif (is_executable('/usr/bin/true')) {
+					pcntl_exec('/usr/bin/true');
+				} else {
+					posix_kill(getmypid(), SIGTERM);
+					//posix_kill(getmypid(), SIGINT);
+					//posix_kill(getmypid(), SIGKILL);
+					//exit(0);
+				}
 			} elseif ($this->child > 0) {
 				// Parent process, sit and wait
 				$status = 'Forked ' . $this->child . ' at ' . strftime('%F %T');
