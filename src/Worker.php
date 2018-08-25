@@ -265,86 +265,99 @@ class Worker implements LoggerAwareInterface
 	 */
 	public function work($interval = 5)
 	{
-		$this->updateProcLine('Starting');
-		$this->startup();
+		try {
+			$this->updateProcLine('Starting');
+			$this->startup();
 
-		while (true) {
-			if ($this->shutdown) {
-				$this->unregister();
-				return;
-			}
-
-			// Attempt to find and reserve a job
-			$job = false;
-			if (!$this->paused) {
-					$job = $this->reserve();
-			}
-
-			if (!$job) {
-				// For an interval of 0, continue now - helps with unit testing etc
-				if ($interval == 0) {
-					break;
+			while (true) {
+				if ($this->shutdown) {
+					$this->unregister();
+					return;
 				}
 
-				// If no job was found, we sleep for $interval before continuing and checking again
-				if ($this->paused) {
-					$this->updateProcLine('Paused');
-				} else {
-					$this->updateProcLine('Waiting for ' . implode(',', $this->queues));
+				// Attempt to find and reserve a job
+				$job = false;
+				if (!$this->paused) {
+						$job = $this->reserve();
 				}
 
-				usleep($interval * 1000000);
-				continue;
+				if (!$job) {
+					// For an interval of 0, continue now - helps with unit testing etc
+					if ($interval == 0) {
+						break;
+					}
+
+					// If no job was found, we sleep for $interval before continuing and checking again
+					if ($this->paused) {
+						$this->updateProcLine('Paused');
+					} else {
+						$this->updateProcLine('Waiting for ' . implode(',', $this->queues));
+					}
+
+					usleep($interval * 1000000);
+					continue;
+				}
+
+				$this->logger->info('got {job}', array('job' => $job));
+				$this->workingOn($job);
+
+				$this->child = null;
+				$this->child = $this->fork();
+
+				// Forked and we're the child. Run the job.
+				if (!$this->child) {
+					try {
+						$status = 'Processing ' . $job->getQueue() . ' since ' . strftime('%F %T');
+						$this->updateProcLine($status);
+						$this->logger->notice($status);
+						$this->perform($job);
+					} catch (Exception $e) {
+						$this->logger->alert('Child catch-all failure {job}, {exception}', array(
+							'job'     => $job,
+							'exception' => $e
+						));
+					} finally {
+						// Exit with status 0, without invoking registered shutdown handlers
+						// since child inherited parent's handlers (and socket connections)
+						if (is_executable('/bin/true')) {
+							pcntl_exec('/bin/true');
+						} elseif (is_executable('/usr/bin/true')) {
+							pcntl_exec('/usr/bin/true');
+						} else {
+							posix_kill(getmypid(), SIGTERM);
+							//posix_kill(getmypid(), SIGINT);
+							//posix_kill(getmypid(), SIGKILL);
+							//exit(0);
+						}
+					}
+				} elseif ($this->child > 0) {
+					// Parent process, sit and wait
+					$status = 'Forked ' . $this->child . ' at ' . strftime('%F %T');
+					$this->updateProcLine($status);
+					$this->logger->info($status);
+
+					// Wait until the child process finishes before continuing
+					pcntl_wait($status);
+					$exitStatus = pcntl_wexitstatus($status);
+
+					if ($exitStatus !== 0) {
+						$this->logger->notice('Job exited with exit code {code}', array(
+							'code' => $exitStatus
+						));
+						$this->failJob($job, new DirtyExitException(
+							'Job exited with exit code ' . $exitStatus
+						));
+					} else {
+						$this->logger->debug('Job returned status code {code}', array('code' => $exitStatus));
+					}
+				}
+
+				$this->doneWorking();
 			}
-
-			$this->logger->info('got {job}', array('job' => $job));
-			$this->workingOn($job);
-
-			$this->child = null;
-			$this->child = $this->fork();
-
-			// Forked and we're the child. Run the job.
-			if (!$this->child) {
-				$status = 'Processing ' . $job->getQueue() . ' since ' . strftime('%F %T');
-				$this->updateProcLine($status);
-				$this->logger->notice($status);
-				$this->perform($job);
-
-				// Exit with status 0, without invoking registered shutdown handlers
-				// since child inherited parent's handlers (and socket connections)
-				if (is_executable('/bin/true')) {
-					pcntl_exec('/bin/true');
-				} elseif (is_executable('/usr/bin/true')) {
-					pcntl_exec('/usr/bin/true');
-				} else {
-					posix_kill(getmypid(), SIGTERM);
-					//posix_kill(getmypid(), SIGINT);
-					//posix_kill(getmypid(), SIGKILL);
-					//exit(0);
-				}
-			} elseif ($this->child > 0) {
-				// Parent process, sit and wait
-				$status = 'Forked ' . $this->child . ' at ' . strftime('%F %T');
-				$this->updateProcLine($status);
-				$this->logger->info($status);
-
-				// Wait until the child process finishes before continuing
-				pcntl_wait($status);
-				$exitStatus = pcntl_wexitstatus($status);
-
-				if ($exitStatus !== 0) {
-					$this->logger->notice('Job exited with exit code {code}', array(
-						'code' => $exitStatus
-					));
-					$this->failJob($job, new DirtyExitException(
-						'Job exited with exit code ' . $exitStatus
-					));
-				} else {
-					$this->logger->debug('Job returned status code {code}', array('code' => $exitStatus));
-				}
-			}
-
-			$this->doneWorking();
+		} catch (Exception $e) {
+			$this->logger->alert('Worker catch-all failure, {exception}', array(
+				'exception' => $e
+			));
 		}
 	}
 
@@ -359,7 +372,7 @@ class Worker implements LoggerAwareInterface
 			try {
 				$job->beforePerform();
 			} catch (Exception $e) {
-				$this->logger->notice('{job} before failed: {exception}', array(
+				$this->logger->notice('Failed beforePerform {job}, {exception}', array(
 					'job'     => $job,
 					'exception' => $e
 				));
@@ -370,7 +383,7 @@ class Worker implements LoggerAwareInterface
 		try {
 			$job->perform();
 		} catch (Exception $e) {
-			$this->logger->notice('{job} failed: {exception}', array(
+			$this->logger->notice('Failed perform {job}, {exception}', array(
 				'job'     => $job,
 				'exception' => $e
 			));
@@ -381,7 +394,7 @@ class Worker implements LoggerAwareInterface
 			try {
 				$job->afterPerform();
 			} catch (Exception $e) {
-				$this->logger->notice('{job} after failed: {exception}', array(
+				$this->logger->notice('Failed afterPerform {job}, {exception}', array(
 					'job'     => $job,
 					'exception' => $e
 				));
@@ -424,8 +437,8 @@ class Worker implements LoggerAwareInterface
 			$queue   = isset($job['queue']) ? $job['queue'] : null;
 		}
 
-		$id = isset($job['id']) ? $job['id'] : null;
-		$class = isset($job['class']) ? $job['class'] : null;
+		$id = is_array($job) && isset($job['id']) ? $job['id'] : null;
+		$class = is_array($job) && isset($job['class']) ? $job['class'] : null;
 
 		if ($id) {
 			try {

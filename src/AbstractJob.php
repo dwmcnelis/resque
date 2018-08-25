@@ -151,20 +151,20 @@ abstract class AbstractJob implements ArrayAccess, IteratorAggregate, JobInterfa
 	public function __toString()
 	{
 		$name = array(
-			'Job{' . $this->queue .'}'
+			'queue: ' . $this->queue
 		);
 
 		if (!empty($this->id)) {
-			$name[] = 'ID: ' . $this->id;
+			$name[] = 'id: ' . $this->id;
 		}
 
-		$name[] = $this->payload['class'];
+		$name[] = 'class: '.$this->payload['class'];
 
 		if (!empty($this->payload['args'])) {
-			$name[] = json_encode($this->payload['args']);
+			$name[] = 'args: '.json_encode($this->payload['args']);
 		}
 
-		return '(' . implode(' | ', $name) . ')';
+		return 'Job (' . implode(', ', $name) . ')';
 	}
 
 	/**
