@@ -9,6 +9,7 @@ use Resque\Exception\JobClassNotFoundException;
 use Resque\Exception\JobIdException;
 use Resque\Exception\JobInvalidException;
 use Resque\Job\Status;
+use Resque\ResolverInterface;
 use Psr\Log\LoggerInterface;
 use \RuntimeException;
 
@@ -28,9 +29,14 @@ class Worker implements LoggerAwareInterface
 	protected $id;
 
 	/**
+	 * @var ResolverInterface Resolver object that implements ResolverInterface (optional)
+	 */
+	protected $resolver = null;
+
+	/**
 	 * @var LoggerInterface Logging object that implements the PSR-3 LoggerInterface
 	 */
-	protected $logger;
+	protected $logger = null;
 
 	/**
 	 * @var array Array of all associated queues for this worker.
@@ -171,17 +177,27 @@ class Worker implements LoggerAwareInterface
 	 */
 	protected function createJobInstance($queue, array $payload)
 	{
-		if (!class_exists($payload['class'])) {
-			throw new JobClassNotFoundException(
-				'Could not find job class ' . $payload['class'] . '.'
-			);
+
+		if (is_null($this->resolver)) {
+			if (!class_exists($payload['class'])) {
+				throw new JobClassNotFoundException(
+					'Could not find job class ' . $payload['class'] . '.'
+				);
+			}
+			$job = new $payload['class']();
+		} else {
+			$job = $this->resolver($payload['class']);
+			if (is_null($job)) {
+				throw new JobClassNotFoundException(
+					'Could not find job class ' . $payload['class'] . '.'
+				);
+			}
 		}
 
-		if (!is_subclass_of($payload['class'], 'Resque\JobInterface')) {
+		if (!is_subclass_of($job, 'Resque\JobInterface')) {
 			throw new JobInvalidException();
 		}
 
-		$job = new $payload['class']();
 		$job->setQueue($queue);
 		$job->setPayload($payload);
 
