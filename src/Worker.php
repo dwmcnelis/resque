@@ -437,8 +437,8 @@ class Worker implements LoggerAwareInterface
 			$queue   = isset($job['queue']) ? $job['queue'] : null;
 		}
 
-		$id = is_array($job) && isset($job['id']) ? $job['id'] : null;
-		$class = is_array($job) && isset($job['class']) ? $job['class'] : null;
+		$id = isset($payload['id']) ? $payload['id'] : null;
+		$class = isset($payload['class']) ? $payload['class'] : null;
 
 		if ($id) {
 			try {
