@@ -186,7 +186,7 @@ class Worker implements LoggerAwareInterface
 			}
 			$job = new $payload['class']();
 		} else {
-			$job = $this->resolver($payload['class']);
+			$job = $this->resolver->resolveClass($payload['class']);
 			if (is_null($job)) {
 				throw new JobClassNotFoundException(
 					'Could not find job class ' . $payload['class'] . '.'
@@ -871,6 +871,17 @@ class Worker implements LoggerAwareInterface
 	public function getStatistic($name)
 	{
 		return new Statistic($this->resque, $name. ':' . $this->getId());
+	}
+
+	/**
+	 * Inject the class resolver object into the worker
+	 *
+	 * @param ResolverInterface $resolver
+	 * @return void
+	 */
+	public function setResolver(ResolverInterface $resolver)
+	{
+		$this->resolver = $resolver;
 	}
 
 	/**
