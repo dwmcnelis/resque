@@ -294,7 +294,7 @@ class Worker implements LoggerAwareInterface
 				// Attempt to find and reserve a job
 				$job = false;
 				if (!$this->paused) {
-						$job = $this->reserve();
+					$job = $this->reserve();
 				}
 
 				if (!$job) {
