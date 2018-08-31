@@ -10,6 +10,7 @@ use Resque\Exception\JobIdException;
 use Resque\Exception\JobInvalidException;
 use Resque\Job\Status;
 use Resque\ResolverInterface;
+use Resque\Version;
 use Psr\Log\LoggerInterface;
 use \RuntimeException;
 
@@ -371,7 +372,8 @@ class Worker implements LoggerAwareInterface
 				$this->doneWorking();
 			}
 		} catch (Exception $e) {
-			$this->logger->alert('Worker catch-all failure, {exception}', array(
+			$this->logger->alert('Worker catch-all failure, {job}, {exception}', array(
+				'job' => $job,
 				'exception' => $e
 			));
 		}
@@ -802,12 +804,17 @@ class Worker implements LoggerAwareInterface
 
 		$this->currentJob = $job;
 
-		$this->resque->getStatusFactory()->forJob($job)->update(Status::STATUS_RUNNING);
+		$queue = $job->getQueue();
+		$payload = $job->getPayload();
+
+		if (!empty($payload['id'])) {
+			$this->resque->getStatusFactory()->forJob($job)->update(Status::STATUS_RUNNING);
+		}
 
 		$data = json_encode(array(
-			'queue' => $job->getQueue(),
+			'queue' => $queue,
 			'run_at' => strftime('%a %b %d %H:%M:%S %Z %Y'),
-			'payload' => $job->getPayload()
+			'payload' => $payload
 		));
 
 		$this->resque->getClient()->set($this->getJobKey(), $data);
